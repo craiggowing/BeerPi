@@ -89,12 +89,12 @@ class BeerMonitor:
         current_state = GPIO.input(self.heating_gpio)
         if enabled:
             if current_state == GPIO.HIGH:
-                sys.stdout.write(f"{int(time.time())}: Changing heating to ON")
+                sys.stdout.write(f"{int(time.time())}: Changing heating to ON\n")
                 sys.stdout.flush()
             GPIO.output(self.heating_gpio, GPIO.LOW)
         else:
             if current_state == GPIO.LOW:
-                sys.stdout.write(f"{int(time.time())}: Changing heating to OFF")
+                sys.stdout.write(f"{int(time.time())}: Changing heating to OFF\n")
                 sys.stdout.flush()
             GPIO.output(self.heating_gpio, GPIO.HIGH)
 
