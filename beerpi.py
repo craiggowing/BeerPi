@@ -49,7 +49,8 @@ class BeerMonitor:
             GPIO.setmode(GPIO.BCM)
             # This is a HIGH type relay, so HIGH means the relay is in the NO state
             GPIO.setup(self.heating_gpio, GPIO.OUT, initial=GPIO.HIGH)
-            sys.stdout.write("GPIO setup complete")
+            sys.stdout.write(f"{int(time.time())}: GPIO setup complete\n")
+            sys.stdout.flush()
             while True:
                 last_temp = self.read_temp()
                 if last_temp is None:
@@ -68,7 +69,8 @@ class BeerMonitor:
                     f'{int(time.time())}, {last_temp}, {int(self.heating)}\n')
                 time.sleep(60)
         except Exception as e:
-            sys.stderr.write(f"Critical error, aborting: {e}\n")
+            sys.stderr.write(f"{int(time.time())}: Critical error, aborting: {e}\n")
+            sys.stderr.flush()
             raise e
         finally:
             GPIO.cleanup(self.heating_gpio)
@@ -78,7 +80,8 @@ class BeerMonitor:
             raw_data = open(self.temp_device, 'r').read()
             temp = float(re.findall('t=([0-9]+)', raw_data)[0]) / 1000
         except Exception as e:
-            sys.stderr.write(f"Error reading temperature: {e}\n")
+            sys.stderr.write(f"{int(time.time())}: Error reading temperature: {e}\n")
+            sys.stderr.flush()
             temp = None
         return temp
 
@@ -86,11 +89,13 @@ class BeerMonitor:
         current_state = GPIO.input(self.heating_gpio)
         if enabled:
             if current_state == GPIO.HIGH:
-                sys.stdout.write("Changing heating to ON")
+                sys.stdout.write(f"{int(time.time())}: Changing heating to ON")
+                sys.stdout.flush()
             GPIO.output(self.heating_gpio, GPIO.LOW)
         else:
             if current_state == GPIO.LOW:
-                sys.stdout.write("Changing heating to OFF")
+                sys.stdout.write(f"{int(time.time())}: Changing heating to OFF")
+                sys.stdout.flush()
             GPIO.output(self.heating_gpio, GPIO.HIGH)
 
 
