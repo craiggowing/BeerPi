@@ -30,6 +30,7 @@ files and show real time stats and controls over HTTP.
 import re
 import sys
 import time
+import signal
 import RPi.GPIO as GPIO
 
 FAIL_LIMIT = 5
@@ -42,8 +43,25 @@ class BeerMonitor:
         self.temp_device = temp_device
         self.log_file = log_file
         self.heating = False
+        self.running = False
+
+    def handle_stop(self, *args, **kwargs):
+        sys.stdout.write(f"{int(time.time())}: Request to quit\n")
+        sys.stdout.flush()
+        if self.running:
+            self.running = False
+        else:
+            sys.stdout.write(f"{int(time.time())}: Forcing exit\n")
+            sys.stdout.flush()
+            self.set_heating(False)
+            GPIO.cleanup(self.heating_gpio)
+            sys.exit(1)
 
     def run(self):
+        self.running = True
+        signal.signal(signal.SIGINT, self.handle_stop)
+        signal.signal(signal.SIGTERM, self.handle_stop)
+        last_tick = 0
         try:
             temp_fails = 0
             GPIO.setmode(GPIO.BCM)
@@ -51,15 +69,19 @@ class BeerMonitor:
             GPIO.setup(self.heating_gpio, GPIO.OUT, initial=GPIO.HIGH)
             sys.stdout.write(f"{int(time.time())}: GPIO setup complete\n")
             sys.stdout.flush()
-            while True:
+            while self.running:
+                tick = time.time()
+                if tick <= last_tick + 60:
+                    time.sleep(1)
+                    continue
+                last_tick = tick
                 last_temp = self.read_temp()
                 if last_temp is None:
                     temp_fails += 1
                     if temp_fails >= FAIL_LIMIT:
                         raise RuntimeError(f'Failed to read temperature after {FAIL_LIMIT} tries')
-                    time.sleep(60)
                     continue
-                self.temp_fails = 0
+                temp_fails = 0
                 if last_temp <= self.low_temp and not self.heating:
                     self.heating = True
                 elif last_temp >= self.high_temp and self.heating:
@@ -67,13 +89,15 @@ class BeerMonitor:
                 self.set_heating(self.heating)
                 open(self.log_file, 'a+').write(
                     f'{int(time.time())}, {last_temp}, {int(self.heating)}\n')
-                time.sleep(60)
+            self.set_heating(False)
         except Exception as e:
             sys.stderr.write(f"{int(time.time())}: Critical error, aborting: {e}\n")
             sys.stderr.flush()
             raise e
         finally:
             GPIO.cleanup(self.heating_gpio)
+        sys.stdout.write(f"{int(time.time())}: Exiting normally\n")
+        sys.stdout.flush()
 
     def read_temp(self):
         try:
