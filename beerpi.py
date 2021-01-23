@@ -58,6 +58,7 @@ class BeerMonitor:
                         raise RuntimeError(f'Failed to read temperature after {FAIL_LIMIT} tries')
                     time.sleep(60)
                     continue
+                self.temp_fails = 0
                 if last_temp <= self.low_temp and not self.heating:
                     self.heating = True
                 elif last_temp >= self.high_temp and self.heating:
